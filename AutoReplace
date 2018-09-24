@@ -1,0 +1,10 @@
+sf=select * from
+tr=truncate table
+cr=create table
+gr=group by
+w=where
+sc=select count(*) from
+dis=distinct
+del=delete from
+v=varchar2(20)
+n=number

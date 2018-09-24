@@ -1,0 +1,5 @@
+create table tmp_majh_0812_01
+(
+idx_no number,
+device_number varchar2(20)
+)

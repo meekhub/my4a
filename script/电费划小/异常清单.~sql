@@ -1,0 +1,89 @@
+--PUE异常局站导出
+SELECT a.area_name 地市,
+       a.group_name 区县,
+       a.room_id 局站ID,
+       a.room_name 局站名称,
+       sum(a.elec_amount)总耗电量,
+       sum(a.device_amount)主设备耗电量,
+       sum(a.elec_amount) / sum(a.device_amount) as "PUE"
+  FROM ELEC_STATION_D a
+ WHERE ACCT_MONTH = '201711'
+ and a.device_amount>0
+ group by a.area_name, a.group_name, a.room_id, a.room_name
+ having sum(a.elec_amount) / sum(a.device_amount)>2
+
+
+
+--电费能耗分析模型 
+--耗电量环比
+select AREA_NAME,
+       GROUP_NAME,
+       ROOM_ID,
+       ROOM_NAME,
+       CUR_ELEC_AMOUNT,
+       LAST_ELEC_AMOUNT,
+       rate
+  from (SELECT AREA_NAME,
+               GROUP_NAME,
+               ROOM_ID,
+               ROOM_NAME,
+               CUR_ELEC_AMOUNT,
+               LAST_ELEC_AMOUNT,
+               ROUND((CUR_ELEC_AMOUNT - LAST_ELEC_AMOUNT) / LAST_ELEC_AMOUNT,
+                     4) as rate
+          FROM (SELECT A.AREA_NAME,
+                       A.GROUP_NAME,
+                       A.ROOM_ID,
+                       A.ROOM_NAME,
+                       SUM(CASE
+                             WHEN A.ACCT_MONTH = '201711' THEN
+                              TO_NUMBER(A.ELEC_AMOUNT)
+                             ELSE
+                              0
+                           END) / 30 CUR_ELEC_AMOUNT,
+                       SUM(CASE
+                             WHEN A.ACCT_MONTH = '201710' THEN
+                              TO_NUMBER(A.ELEC_AMOUNT)
+                             ELSE
+                              0
+                           END) / 31 LAST_ELEC_AMOUNT
+                  FROM ELEC_STATION_D A
+                 WHERE ACCT_MONTH IN ('201711', '201710')
+                 GROUP BY A.AREA_NAME, A.GROUP_NAME, A.ROOM_ID, A.ROOM_NAME)
+         where LAST_ELEC_AMOUNT > 0)
+ where rate > 0.5
+ and CUR_ELEC_AMOUNT>100;
+ 
+ 
+--综合电价
+SELECT B.AREA_DESC,
+       BUR_STAND_NAME,
+       BUR_STAND_CODE,
+       TOTAL_ELECTRICITY,
+       ELEC_CHARGE_PRICE,
+       RATE
+  FROM (SELECT A.AREA_NO,
+               C.BUR_STAND_NAME,
+               C.BUR_STAND_CODE,
+               SUM(A.TOTAL_ELECTRICITY) TOTAL_ELECTRICITY,
+               SUM(A.ELEC_CHARGE_PRICE) ELEC_CHARGE_PRICE,
+               SUM(A.ELEC_CHARGE_PRICE) / SUM(A.TOTAL_ELECTRICITY) AS RATE
+          FROM (SELECT AREA_NO,
+                       ELECTRIC_METER_ID,
+                       TOTAL_ELECTRICITY,
+                       ELEC_CHARGE_PRICE
+                  FROM BWT_REIM_BASIC_DATA_INFO_M A
+                 WHERE A.ACCT_MONTH = '201710') A,
+               (SELECT *
+                  FROM BWT_ELECTRIC_METER_INFO_M B
+                 WHERE ACCT_MONTH = '201710') B,
+               (SELECT *
+                  FROM BWT_BUR_STAND_INFO_M
+                 WHERE ACCT_MONTH = '201710') C
+         WHERE A.ELECTRIC_METER_ID = B.ELECTRIC_METER_ID
+           AND B.BUR_STAND_CODE = C.BUR_STAND_CODE
+         GROUP BY A.AREA_NO, C.BUR_STAND_NAME, C.BUR_STAND_CODE) A,
+       DIM.DIM_AREA_NO B
+ WHERE (RATE < 0.6
+    OR RATE > 1)
+   AND A.AREA_NO = B.AREA_NO

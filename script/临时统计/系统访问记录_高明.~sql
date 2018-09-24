@@ -1,0 +1,84 @@
+--决策系统
+SELECT SUBSTR(T.CREATE_DATE, 1, 8),
+       NVL(Y.ATTR_VALUE, '018'),
+       '1' SYS_KIND,
+       SUBSTR(MENU_PATH, INSTR(MENU_PATH, '>>', -1) + 2) REPORT_NAME,
+       SUBSTR(MENU_PATH, 7, LENGTH(MENU_PATH)) MENU_PATH,
+       T.USER_ID,
+       X.OA_UID,
+       X.USER_NAME,
+       X.MEMO,
+       X.MOBILE,
+       to_char(T.CREATE_DATE,'yyyy/mm/dd HH24:MI:SS')
+  FROM DSS_FRAME.E_OPERATION_LOG@HBODS T,
+       (SELECT T.RESOURCES_ID,
+               SYS_CONNECT_BY_PATH(T.RESOURCES_NAME, '>>') MENU_PATH,
+               T.ORD
+          FROM DSS_FRAME.E_MENU@HBODS T
+         START WITH T.RESOURCES_ID = '0'
+        CONNECT BY PRIOR T.RESOURCES_ID = T.PARENT_ID) M,
+       DSS_FRAME.E_USER@HBODS X,
+       (SELECT A.*
+          FROM DSS_FRAME.E_USER_ATTRIBUTE@HBODS A
+         WHERE ATTR_CODE = 'AREA_NO') Y
+ WHERE T.MENU_ID = M.RESOURCES_ID
+   AND T.USER_ID = X.USER_ID
+   AND SUBSTR(T.CREATE_DATE, 1, 8) >= '20180101'
+   AND X.USER_ID = Y.USER_ID(+)
+   
+--承包助手
+SELECT to_char(T.CREATE_DATE, 'yyyymmdd'),
+       NVL(Y.ATTR_VALUE, '018'),
+       '3' SYS_KIND,
+       SUBSTR(MENU_PATH, INSTR(MENU_PATH, '>>', -1) + 2) REPORT_NAME,
+       SUBSTR(MENU_PATH, 7, LENGTH(MENU_PATH)) MENU_PATH,
+       T.USER_ID,
+       X.OA_UID,
+       X.USER_NAME,
+       X.MEMO,
+       X.MOBILE,
+       to_char(T.CREATE_DATE,'yyyy/mm/dd HH24:MI:SS')
+  FROM NEW_MOBILE_CBZS.E_OPERATION_LOG T,
+       (SELECT T.RESOURCES_ID,
+               SYS_CONNECT_BY_PATH(T.RESOURCES_NAME, '>>') MENU_PATH,
+               T.ORD
+          FROM NEW_MOBILE_CBZS.E_MENU T
+         START WITH T.RESOURCES_ID = '0'
+        CONNECT BY PRIOR T.RESOURCES_ID = T.PARENT_ID) M,
+       DSS_FRAME.E_USER@HBODS X,
+       (SELECT A.*
+          FROM NEW_MOBILE_CBZS.E_USER_ATTRIBUTE A
+         WHERE ATTR_CODE = 'AREA_NO') Y
+ WHERE T.MENU_ID = M.RESOURCES_ID
+   AND T.USER_ID = X.USER_ID
+   AND SUBSTR(T.CREATE_DATE, 1, 8) >= '20180101'
+   AND X.USER_ID = Y.USER_ID(+)
+
+--手机经分
+select 
+to_char(t.time, 'yyyymmdd') day_id,
+FUNC_GET_AREA_FROM_DEPT(d.user_umo_name),
+'2',
+t.action,
+substr(t.action,3,instr(t.action,'一级')-3),
+t.action,
+d.ispire_staffid,
+d.user_name,
+d.user_umou_name,
+d.ctpreferredmobile,
+'',
+'',
+'',
+'',
+'',
+t.time
+  from new_mobdss.HISTORY_LOG t, cs_dss.oa_org_user_name_mulu@hbods d
+ where t.oa_uid = d.user_id --和实际OA关联，剔除了测试账号 
+   and to_char(t.time, 'yyyymmdd') >= '20180209' 
+   and t.action_type='4'
+   and t.action like '查看%一级%'
+
+select * from new_mobdss.HISTORY_LOG where to_char(time, 'yyyymmdd') >= '20180208'
+and oa_uid='majianhui'
+
+select * from cs_dss.oa_org_user_name_mulu@hbods where ispire_staffid='sf_majh'

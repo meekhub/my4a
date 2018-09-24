@@ -1,0 +1,26 @@
+select * from user_db_links;
+
+select * from temp_user.TMP_MAJH_FAMILY_OUT_01@TMP170410_CL_TO_DW ;
+
+insert into cl_family_user_info_m
+  SELECT '201708' acct_month,
+         AREA_no,
+         city_no,
+         CELL_PHONE as kd_number,
+         RESERV1     as mobile_number,
+         RESERV3     as oper_type,
+         RESERV4     trans_wish,
+         RESERV5     user_value,
+         RESERV6     terminal_corp,
+         RESERV7     terminal_model,
+         RESERV8     is_fit_all,
+         RESERV9     market_date,
+         RESERV10    card_num
+    FROM temp_user.tmp_majh_family_out_0830_2@TMP170410_CL_TO_DW  A
+   
+select area_no,count(*) from clzx_user.cl_family_user_info_m
+group by area_no;
+
+update clzx_user.cl_family_user_info_m set area_no='018'
+
+

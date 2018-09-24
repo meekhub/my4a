@@ -1,0 +1,5 @@
+select * from dw.dw_v_user_base_info_user a where acct_month='201807'
+and a.IS_KD_BUNDLE='011'
+and is_onnet='1'
+and area_no='188'
+and bundle_id='100627379494'

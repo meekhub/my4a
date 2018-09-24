@@ -1,0 +1,77 @@
+SELECT T.HUAXIAO_NO 支局编码,
+       T.HUAXIAO_NAME 支局名称,
+       T.HUAXIAO_TYPE_NAME 支局类型,
+       A.USER_NO 用户编码,
+       A.DEVICE_NUMBER 手机号,
+       (A.PRICE_FEE + A.PRICE_FEE_OCS) AS 税后出账收入,
+       CASE
+         WHEN A.TELE_TYPE = '2' THEN
+          '移动'
+         WHEN A.TELE_TYPE_NEW = 'G010' THEN
+          '宽带'
+         WHEN A.TELE_TYPE_NEW = 'G110' THEN
+          '电视'
+         WHEN A.TELE_TYPE_NEW IN ('G020', 'G040') THEN
+          '专线电路'
+         WHEN A.TELE_TYPE_NEW IN ('G000', 'G001', 'G002') THEN
+          '固话'
+         ELSE
+          '其他'
+       END 业务类型,
+       CASE
+         WHEN A.IS_ONNET = '1' THEN
+          '是'
+         ELSE
+          '否'
+       END 是否在网,
+       CASE
+         WHEN A.IS_ACCT = '1' OR A.IS_ACCT_OCS = '1' THEN
+          '是'
+         ELSE
+          '否'
+       END 是否出账
+  FROM (SELECT *
+          FROM DW.DW_V_USER_HUAXIAO_INFO_ALL A
+         WHERE A.ACCT_MONTH = '201712'
+           AND AREA_NO = '182'
+           AND A.IS_HUAXIAO_07 = '1') A,
+       (SELECT *
+          FROM DIM.DIM_ZQ_GROUP_HUAXIAO T
+         WHERE T.AREA_NO = '182'
+           AND T.HUAXIAO_TYPE = '07') T
+ WHERE A.GROUP_NO = T.Channel_No
+
+
+
+--支局
+SELECT T.HUAXIAO_NO 支局编码,
+       T.HUAXIAO_NAME 支局名称, 
+       sum(A.PRICE_FEE + A.PRICE_FEE_OCS) AS 税后出账收入
+         FROM (SELECT *
+          FROM DW.DW_V_USER_HUAXIAO_INFO_ALL A
+         WHERE A.ACCT_MONTH = '201803'
+           AND AREA_NO = '181'
+           AND A.IS_HUAXIAO_07 = '1') A,
+       (SELECT *
+          FROM DIM.DIM_ZQ_GROUP_HUAXIAO T
+         WHERE T.AREA_NO = '181'
+           AND T.HUAXIAO_TYPE = '07') T
+ WHERE A.GROUP_NO = T.Channel_No
+ group by T.HUAXIAO_NO,t.huaxiao_name
+
+
+--集团
+SELECT T.HUAXIAO_NO 支局编码,
+       T.HUAXIAO_NAME 支局名称, 
+       sum(A.PRICE_FEE + A.PRICE_FEE_OCS) AS 税后出账收入
+         FROM (SELECT *
+          FROM DW.DW_V_USER_HUAXIAO_INFO_ALL A
+         WHERE A.ACCT_MONTH = '201803'
+           AND AREA_NO = '181'
+           AND A.IS_HUAXIAO_07 = '1') A,
+       (SELECT *
+          FROM DIM.Dim_Zq_Huaxiao_Info T
+         WHERE T.AREA_NO = '181'
+           AND T.HUAXIAO_TYPE = '07') T
+ WHERE A.Huaxiao_No_07 = T.HUAXIAO_NO
+ group by T.HUAXIAO_NO,t.huaxiao_name

@@ -1,0 +1,47 @@
+ select f.day_id,
+                           area_id,
+                       d.sort_id,
+                       area_desc ,
+                       sum(f.FIRST_DAY_INCO) FIRST_DAY_INCO,
+                       sum(f.CUR_RENT_FEE) CUR_RENT_FEE,
+                       sum(f.LAST_W_INCO) LAST_W_INCO,
+                       sum(f.W_INCO_L) W_INCO_L,
+                       sum(f.W_INCO_C) W_INCO_C,
+                       f.W_DAY W_DAY,
+                       sum(f.LAST_H_INCO) LAST_H_INCO,
+                       sum(f.H_INCO_L) H_INCO_L,
+                       sum(f.H_INCO_C) H_INCO_C,
+                       f.H_DAY H_DAY,
+                       sum(f.W_INCOME) W_INCOME,
+                       sum(f.H_INCOME) H_INCOME,
+                       f.CUR_DATE_NUM CUR_DATE_NUM,
+                       sum(f.CUR_NEW_USER) CUR_NEW_USER,
+                       sum(f.LAST_NEW_USER) LAST_NEW_USER,
+                       sum(f.LAST_NEW_USER_RENT_FEE) LAST_NEW_USER_RENT_FEE,
+                       f.CUR_REMAIN_DATE_NUM CUR_REMAIN_DATE_NUM,
+                       sum(f.NEW_USER_REMAIN_RENT_FEE) NEW_USER_REMAIN_RENT_FEE,
+                       sum(f.OLD_USER_RENT_FEE) OLD_USER_RENT_FEE,
+                       sum(f.LAST_BALANCE_INCO) LAST_BALANCE_INCO,
+                       sum(f.OLD_USER_REMAIN_RENT_FEE) OLD_USER_REMAIN_RENT_FEE,
+                       sum(f.PRENST_FEE) PRENST_FEE,
+                       sum(f.FORE_INCO) FORE_INCO,
+                       sum(f.LAST_INCO) LAST_INCO,
+                       sum(f.LAST_INCO+f.LAST_OCS_INCO) LAST_SUM_INCO,                       
+                       sum(f.OCS_FIRST_DAY_INCO) OCS_FIRST_DAY_INCO,
+               sum(f.OCS_CUR_INCO) OCS_CUR_INCO,
+               sum(f.OCS_INCO) OCS_INCO,
+               sum(f.LAST_OCS_INCO) LAST_OCS_INCO,
+               sum(f.FORE_INCO+f.OCS_INCO)  FORE_SUM_INCO,
+                decode(sum(f.LAST_INCO+f.LAST_OCS_INCO),
+                              0,
+                              0,
+                              (sum(f.FORE_INCO+f.OCS_INCO) - sum(f.LAST_INCO+f.LAST_OCS_INCO)) / sum(f.LAST_INCO+f.LAST_OCS_INCO)) income_hb,
+                       
+                       sum(CJ_DX_FEE) CJ_DX_FEE                           
+                  from NEW_ALLDM.dm_kkpi_d_inco_forecast_0220 f ,
+                            (select AREA_NO FACT_AREA_ID,DESCRIPTION AREA_DESC,IDX_NO SORT_ID,AREA_NO AREA_ID FROM NEW_ALLDMCODE.DMCODE_AREA)  d
+                 where f.day_id = '20180222'
+                 and  f.AREA_NO<>'-1' and f.CITY_NO='-1' and f.TOWN_NO='-1' 
+                   and f.AREA_NO=d.FACT_AREA_ID
+                 group by f.day_id ,f.w_day,f.h_day, area_desc,f.CUR_DATE_NUM,f.CUR_REMAIN_DATE_NUM,d.sort_id,area_id
+                 order by d.sort_id

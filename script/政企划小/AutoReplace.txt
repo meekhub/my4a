@@ -1,0 +1,16 @@
+tr=truncate table
+s=select
+sf=select * from
+up=update
+gr=group by
+cr=create table
+v=varchar2(20)
+n=number
+del=delete from
+sc=select count(*) from
+hav=having
+w=where
+ins=insert into
+dis=distinct
+
+

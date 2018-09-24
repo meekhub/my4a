@@ -1,0 +1,106 @@
+--划小承包单元编码（月）
+SELECT T.ACCT_MONTH 账期,
+       X.AREA_DESC 地市,
+       H_LEVEL_UNIT_NAME 承包单元上一级生产单元名称,
+       CNTRT_MGMT_UNIT_CD 划小承包单元编码,
+       CNTRT_MGMT_UNIT_NM 划小承包单元名称,
+       decode(CNTRT_MGMT_UNIT_LEVEL,'40','四级单元') 划小承包单元层级,
+       case when CNTRT_MGMT_TYPE='1020' then '农村支局承包经营'
+         when CNTRT_MGMT_TYPE='3010' then '店长承包经营' 
+           when CNTRT_MGMT_TYPE='3020' then '渠道经理按商承包经营'
+             when CNTRT_MGMT_TYPE='3030' then '渠道经理按片区承包经营' end 划小承包单元类型,
+       decode(CNTRT_MGMT_CHECK_TYPE,'10','业务量承包','收入承包') 划小承包考核类型,
+       CNTRT_AGRMNT_CD 承包协议编码
+  FROM BWT_CNTRT_MGMT_UNIT_M T, DIM.DIM_AREA_NO_JT X
+ WHERE T.ACCT_MONTH = '201711'
+   AND T.LATN_ID = X.STD_LATN_CD;
+   
+
+--划小承包单元与渠道关系（月）   
+select 
+b.huaxiao_no,b.huaxiao_name,c.channel_nbr,c.channel_name
+ from BWT_CNTRT_MGMT_CHNL_REL_M a,dim.dim_huaxiao_info b,
+crm_dsg.channel@hbods c
+ where a.acct_month='201711'
+ and a.sale_outlets_cd=c.channel_nbr
+ and a.cntrt_mgmt_unit_cd=b.huaxiao_no;
+ 
+ --划小承包单元与承包单元小CEO关系（月）
+select * from bwt_cntrt_mgmt_main_rel_m a where acct_month='201711'
+
+
+--划小承包量收、成本、预算汇总指标（月）
+ select 
+ b.huaxiao_no,b.huaxiao_name,c.target_name,c.target_cd,
+ decode(a.cntrt_target_unit,'1','户','元'),a.target_value
+  from BWT_CNTRT_MGMT_SUM_M a,dim.dim_huaxiao_info b,tmp_majh_target c
+  where a.acct_month='201711'
+  and a.cntrt_mgmt_unit_cd=b.huaxiao_no
+  and a.cntrt_target_cd=c.target_name
+  
+ 
+
+
+--汇总
+select x.flag, x.idx_no, x.target_code, x.target_name, sum(t.target_value)
+  from bwt_cntrt_mgmt_sum_m t, dim.dim_hx_target_code x
+ where t.acct_month = '201707'
+   and t.cntrt_target_cd = x.target_code
+ group by x.flag, x.idx_no, x.target_code, x.target_name
+order by x.flag,x.idx_no
+
+
+--区分划小类型
+SELECT X.FLAG,
+       X.IDX_NO,
+       CASE
+         WHEN CNTRT_MGMT_TYPE = '1020' THEN
+          '农村支局承包经营'
+         WHEN CNTRT_MGMT_TYPE = '3010' THEN
+          '店长承包经营'
+         WHEN CNTRT_MGMT_TYPE = '3020' THEN
+          '渠道经理按商承包经营'
+         WHEN CNTRT_MGMT_TYPE = '3030' THEN
+          '渠道经理按片区承包经营'
+       END CNTRT_MGMT_TYPE,
+       X.TARGET_CODE,
+       X.TARGET_NAME,
+       SUM(T.TARGET_VALUE)
+  FROM BWT_CNTRT_MGMT_SUM_M   T,
+       DIM.DIM_HX_TARGET_CODE X,
+       BWT_CNTRT_MGMT_UNIT_M  Y
+ WHERE T.ACCT_MONTH = '201711'
+   AND T.CNTRT_TARGET_CD = X.TARGET_CODE
+   AND Y.ACCT_MONTH = '201711'
+   AND T.CNTRT_MGMT_UNIT_CD = Y.CNTRT_MGMT_UNIT_CD
+ GROUP BY X.FLAG,
+          X.IDX_NO,
+          CASE
+            WHEN CNTRT_MGMT_TYPE = '1020' THEN
+             '农村支局承包经营'
+            WHEN CNTRT_MGMT_TYPE = '3010' THEN
+             '店长承包经营'
+            WHEN CNTRT_MGMT_TYPE = '3020' THEN
+             '渠道经理按商承包经营'
+            WHEN CNTRT_MGMT_TYPE = '3030' THEN
+             '渠道经理按片区承包经营'
+          END CNTRT_MGMT_TYPE,
+          X.TARGET_CODE,
+          X.TARGET_NAME
+ ORDER BY X.FLAG, X.IDX_NO
+
+
+--到划小单元
+select a.area_desc,b.city_desc,y.huaxiao_no,y.huaxiao_name, x.target_code, x.target_name, sum(t.target_value)
+  from bwt_cntrt_mgmt_sum_m t, dim.dim_hx_target_code x,dim.dim_huaxiao_info y,dim.dim_area_no a,dim.dim_city_no b
+ where t.acct_month = '201711'
+   and t.cntrt_target_cd = x.target_code
+   and t.cntrt_mgmt_unit_cd=y.huaxiao_no
+   and y.area_no=a.area_no
+   and y.city_no=b.city_no
+ group by  a.area_desc,b.city_desc,y.huaxiao_no,y.huaxiao_name, x.target_code, x.target_name,a.idx_no
+ order by a.idx_no;
+ 
+ 
+select * from bwt_cntrt_mgmt_unit_m
+ 

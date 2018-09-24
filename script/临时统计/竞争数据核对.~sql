@@ -1,0 +1,42 @@
+select * from 
+(SELECT T.*,
+       NVL(C.CITY_NO_NEW, FUNC_CITY_NO_RATE(T.AREA_NO, TELE_MAP)) CITY_NO
+  FROM MID_CPT_USER_D_1 T,
+       
+       (SELECT DISTINCT CITY_NO, CITY_NO_NEW FROM MID_DM_BUSI_ANAL_CITY_INFO) C --20150430 按照市场部维护的区县码表，进行关联
+
+ WHERE T.CITY_NO_NEW = C.CITY_NO(+))
+ where city_no in ('018184024', '018182015')
+
+
+
+SELECT B.AREA_NO, B.CITY_NO, B.CITY_NO_NEW
+  FROM JS_REPORT.BWT_RANDOM_REGION_D B where city_no in ('018184024', '018182015')
+  
+018184024》  8130734   经开区
+018182015》  8130398   北戴河新区
+018180041》  8130903   沧州高新区
+
+select * from bwt_random_region_d t where t.city_no in ('018184024','018182015','018180041')
+select * from ODS.O_PTY_COMP_CITY_RATE where city_no in ('018184024','018182015','018180041')
+
+
+
+
+--沧州高新区核查
+select * from MID_CPT_USER_D_1 a where a.city_no_new='018180041';
+
+select NET_TYPE_ID,sum(reach_cnt) from MID_CPT_USER_D_1 a where a.city_no_new=''
+group by NET_TYPE_ID;
+
+
+p_cpt_serv_ot_cur;
+p_bwt_evt_cpt_user_d;
+
+SELECT /*+PARALLEL(T,2)*/
+ count(distinct ACC_NBR) 
+  FROM CPT_SERV_OT_CUR T
+ WHERE T.ACCT_MONTH = '201805'
+   AND T.DAY_ID = '19'
+   and city_no='018180041'
+   and reach_flag='1'

@@ -1,0 +1,21 @@
+select a.area_desc,
+       b.city_desc,
+       t.huaxiao_no,
+       t.huaxiao_name,
+       sum(new_num),
+       sum(cdma_num),
+       sum(adsl_num),
+       sum(iptv_num),
+       sum(total_fee),
+       sum(onnet_cdma_num),
+       sum(onnet_adsl_num),
+       sum(onnet_iptv_num),
+       sum(acct_cdma_num),
+       sum(acct_adsl_num),
+       sum(acct_iptv_num)
+  from tmp_v_huaxiao_info_m t, dim.dim_area_no a, dim.dim_city_no b
+ where T.ACCT_MONTH = '201801'
+   AND T.HUAXIAO_TYPE = '02'
+   and t.area_no = a.area_no
+   and t.city_no = b.city_no
+ group by a.area_desc, b.city_desc, t.huaxiao_no, t.huaxiao_name

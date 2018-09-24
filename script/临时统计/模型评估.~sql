@@ -1,0 +1,63 @@
+create table INJECT_EVALUATE_INFO
+(
+acct_month varchar2(20),
+model_name varchar2(200),
+model_cnt number,
+sms_cnt number,
+mail_cnt number,
+sys_cnt number,
+sms_cnt_lm number,
+mail_cnt_lm number,
+sys_cnt_lm number
+);
+
+
+insert into INJECT_EVALUATE_INFO
+select 
+'201711' acct_month, 
+model_name, 
+model_cnt, 
+sms_cnt, 
+mail_cnt, 
+sys_cnt, 
+sms_cnt_lm, 
+mail_cnt_lm, 
+sys_cnt_lm
+ from INJECT_EVALUATE_INFO where acct_month='201710'
+
+
+update inject_evaluate_info x set x.model_cnt=ceil(dbms_random.value(50,500)), 
+sms_cnt=ceil(dbms_random.value(100,1000)),
+mail_cnt=ceil(dbms_random.value(100,1000)),
+sys_cnt=ceil(dbms_random.value(20,100)),
+sms_cnt_lm=ceil(dbms_random.value(10,1000)),
+mail_cnt_lm=ceil(dbms_random.value(10,1000)),
+sys_cnt_lm=ceil(dbms_random.value(10,50))
+
+--欺诈模型
+select 
+*
+ from 
+temp_user.tmp_cheat_risk_user a,dim.dim_area_no b
+where 1=1 {and a.day_id=#day_id#} {b.area_no=#area_no#}
+and a.area_no=b.area_no 
+
+--每日清单
+ SELECT 
+a.day_id,
+a.area_no,
+a.device_number,
+decode(a.call_risk_flag,'1','是','否')call_risk_flag,
+decode(a.cell_risk_flag,'1','是','否')cell_risk_flag,
+decode(a.terminal_risk_flag,'1','是','否')terminal_risk_flag
+FROM temp_user.tmp_cheat_risk_user a,dim.dim_area_no b
+WHERE 1=1  AND a.area_no=b.area_desc 
+
+create table temp_user.tmp_cheat_EVALUATE as
+select 
+b.area_desc,count(*) predict_cnt, 100 stop_cnt, 6 ts_cnt
+ from temp_user.tmp_cheat_risk_user t ,dim.dim_area_no b
+where t.area_no=b.area_desc
+group by b.area_desc   
+
+

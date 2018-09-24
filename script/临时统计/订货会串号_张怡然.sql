@@ -1,0 +1,15 @@
+select t.*, t.rowid from tmp_majh_0227_01 t;
+
+
+create table tmp_majh_0227_02 as
+select a.*,
+       case
+         when b.MOBILE_NO is not null then
+          '1'
+         else
+          '0'
+       end flag
+  from tmp_majh_0227_01 a,
+       CRM_DSG.IR_MOBILE_USING_T@HBODS b
+ where a.terminal_code = b.MOBILE_NO(+)
+

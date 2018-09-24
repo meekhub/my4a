@@ -1,0 +1,76 @@
+SELECT user_dinner,user_dinner_desc,demo
+  FROM DIM.DIM_USER_DINNER
+ WHERE USER_DINNER IN ('1410261',
+                       '1410262',
+                       '1410265',
+                       '1410266',
+                       '1414359',
+                       '1414362',
+                       '1414364',
+                       '1414361',
+                       '1414365',
+                       '1414363',
+                       '1414368',
+                       '1414370',
+                       '1414382',
+                       '1414383');
+
+
+create table tmp_majh_dim_dinner
+(
+ACCt_month varchar2(20),
+area_no  varchar2(20), 
+USER_NO  varchar2(20), 
+user_dinner varchar2(20), 
+ALL_JF_FLUX number,
+SP_NUM number,
+SP_MO_NUM number,
+SP_MT_NUM number,
+JF_TIMES  number
+)
+
+DECLARE
+  V_MONTH VARCHAR2(100);
+  CURSOR V_AREA IS
+    SELECT * FROM DIM.DIM_AREA_NO WHERE AREA_NO <> '018' ORDER BY IDX_NO;
+BEGIN
+  FOR V_NUM IN 201601 .. 201612 LOOP
+    V_MONTH := TO_CHAR(V_NUM);
+    FOR C1 IN V_AREA LOOP
+      INSERT INTO tmp_majh_user_1106
+        SELECT V_MONTH,
+               C1.AREA_NO,
+               B.USER_NO,
+               A.USER_DINNER,
+               B.ALL_JF_FLUX,
+               B.SP_NUM,
+               B.SP_MO_NUM,
+               B.SP_MT_NUM,
+               B.JF_TIMES
+          FROM TMP_MAJH_DIM_DINNER A,
+               (SELECT ACCT_MONTH,
+                       AREA_NO,
+                       USER_NO,
+                       ALL_JF_FLUX,
+                       SP_NUM,
+                       SP_MO_NUM,
+                       SP_MT_NUM,
+                       JF_TIMES,
+                       USER_DINNER
+                  FROM DW.DW_V_USER_BASE_INFO_USER
+                 WHERE ACCT_MONTH = V_MONTH
+                   AND AREA_NO = C1.AREA_NO
+                   AND TO_CHAR(INNET_DATE, 'YYYYMM') >= '201601'
+                   AND TELE_TYPE = '2'
+                   AND IS_ONNET = '1') B
+         WHERE A.USER_DINNER = B.USER_DINNER(+);
+      COMMIT;
+    END LOOP;
+  END LOOP;
+END;
+   
+   
+select * from dw.dw_v_user_stream
+   
+
+

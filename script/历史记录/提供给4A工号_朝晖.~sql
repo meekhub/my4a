@@ -1,0 +1,2 @@
+select a.manager_loginid,a.manager_telephone,a.manager_loginname from dim.dim_huaxiao_info a
+where a.manager_loginid is not null

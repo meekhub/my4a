@@ -1,0 +1,66 @@
+--PUE趋势分析模型
+SELECT *
+  FROM ELEC_STATION_D
+ WHERE ACCT_MONTH = '201710'
+   AND DAY_ID = '28'
+   AND PUE > 2;
+
+
+create table BASE_ELEC_ALARM_MODEL
+(
+acct_month	char(6),
+area_no	varchar2(10),
+elec_fee	number,
+left_fee	number,
+elec_rate	number
+)
+
+
+--电费异常分析模型
+CREATE TABLE ELEC_ALARM_MODEL AS
+select 
+ACCT_MONTH,
+AREA_NO, 
+ELEC_FEE,
+left_fee,
+left_fee/elec_fee as elec_rate
+from
+(SELECT '201710' ACCT_MONTH,
+       AREA_NO,
+       TOTAL_ELECTRICITY * ELEC_CHARGE_PRICE AS ELEC_FEE,
+       TOTAL_ELECTRICITY * ELEC_CHARGE_PRICE * DBMS_RANDOM.VALUE(0, 0.5) AS LEFT_FEE
+  FROM BWT_REIM_BASIC_DATA_INFO_M
+ WHERE ACCT_MONTH = '201708');
+ 
+ 
+ --电费能耗分析模型
+create table ELEC_CONSUM_MODEL AS
+SELECT * FROM ELEC_ALARM_MODEL;
+
+insert into  ELEC_CONSUM_MODEL
+
+select '201710',area_no,0,0,avg(elec_rate)-0.1 from ELEC_ALARM_MODEL t group by area_no
+
+;
+--IDC机房能耗投入产出分析
+create table ELEC_IDC_MODEL AS
+select 
+'201710' ACCT_MONTH,
+AREA_NO,
+electric_fee, 
+electric_flux, 
+idc_inc
+ from BWT_IDC_ENERGY_CONSUM1_M
+
+
+
+
+
+
+
+
+
+
+
+
+

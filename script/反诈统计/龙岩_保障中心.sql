@@ -1,0 +1,63 @@
+create table tmp_majh_longyan_roam
+( 
+device_number varchar(20),
+user_cnt integer
+)
+
+
+dw.dw_v_user_base_info_user
+
+insert into tmp_majh_longyan_roam
+SELECT ACCT_MONTH, DEVICE_NUMBER, COUNT(*) USER_CNT
+  FROM DW_V_USER_CDR_CDMA_OCS
+ WHERE ACCT_MONTH = '201710'
+   AND ROAM_AREA_CODE = '384'
+ GROUP BY ACCT_MONTH, DEVICE_NUMBER;
+
+
+
+ --oracle—≠ª∑÷¥––
+DECLARE
+  V_MONTH VARCHAR2(100);
+  CURSOR V_AREA IS
+    SELECT * FROM DIM.DIM_AREA_NO WHERE AREA_NO <> '018' ORDER BY IDX_NO;
+BEGIN
+  FOR V_NUM IN 20171101 .. 20171122 LOOP
+    V_MONTH := TO_CHAR(V_NUM);
+    FOR C1 IN V_AREA LOOP
+      INSERT INTO TMP_MAJH_LONGYAN_ROAM
+        SELECT DEVICE_NUMBER, COUNT(*) USER_CNT
+          FROM DW.DW_V_USER_CDR_CDMA_OCS
+         WHERE ACCT_MONTH = '201711'
+           AND CALL_DATE = SUBSTR(V_MONTH, 7, 2)
+           AND AREA_NO = C1.AREA_NO
+           AND ROAM_AREA_CODE = '384'
+         GROUP BY DEVICE_NUMBER
+        UNION ALL
+        SELECT DEVICE_NUMBER, COUNT(*) USER_CNT
+          FROM DW.DW_V_USER_CDR_CDMA
+         WHERE ACCT_MONTH = '201711'
+           AND CALL_DATE = SUBSTR(V_MONTH, 7, 2)
+           AND AREA_NO = C1.AREA_NO
+           AND ROAM_AREA_CODE = '384'
+         GROUP BY DEVICE_NUMBER;
+      COMMIT;
+    END LOOP;
+  END LOOP;
+END;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   

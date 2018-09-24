@@ -1,0 +1,17 @@
+SELECT X.*, Y.USER_ID
+  FROM (SELECT C.AREA_DESC,
+               A.HUAXIAO_NO,
+               A.HUAXIAO_NAME,
+               A.HUAXIAO_TYPE_NAME,
+               A.MANAGER_LOGINID,
+               A.MANAGER_LOGINNAME,
+               A.MANAGER_TELEPHONE
+          FROM (SELECT * FROM DIM.DIM_HUAXIAO_INFO WHERE HUAXIAO_TYPE <> '09') A,
+               E_USER B,
+               DIM.DIM_AREA_NO@OLDHBDW C
+         WHERE A.MANAGER_LOGINID = B.USER_ID(+)
+           AND A.AREA_NO = C.AREA_NO(+)
+           AND B.USER_ID IS NULL) X,
+       E_USER Y
+ WHERE X.MANAGER_TELEPHONE = Y.MOBILE(+)
+   AND X.MANAGER_LOGINNAME = Y.USER_NAME(+)

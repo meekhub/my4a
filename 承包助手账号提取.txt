@@ -1,0 +1,46 @@
+统计sql是：（mobile_cbzs用户）
+--各地市小ceo明细统计
+delete from mobile_cbzs.temp_tj_hd_xch t;
+commit;
+
+insert into  mobile_cbzs.temp_tj_hd_xch 
+select F.ATTR_VALUE city_No,
+       nvl(H.DESCRIPTION, '全部') CITY_DESC,
+       h.ind_no,
+       u.login_id,
+       u.user_name,
+       u.mobile,
+       u.EXT1 oa_id,
+       d.CHENGBAO_NO,
+       d.CHENGBAO_NAME,
+       c.type_id,
+       c.TYPE_DESC
+  from mobile_cbzs.c_dmcode_chengbao_type     c,
+       mobile_cbzs.c_dmcode_chengbao          d,
+       mobile_cbzs.c_dmcode_chengbao_user_rel e,
+       mobile_cbzs.e_user                     u,
+       mobile_cbzs.e_user_attribute           f,
+       mobile_cbzs.c_dmcode_city              H
+ where e.CHENGBAO_NO = d.CHENGBAO_NO(+)
+   and d.CHENGBAO_TYPE = c.type_id(+)
+   and e.STAFF_ID = u.login_id(+)
+   and u.login_id = f.user_id(+)
+   AND F.ATTR_VALUE = H.CITY_ID(+)
+   and f.attr_code = 'CITY_NO'
+   and d.AREA_NO = '185'
+ order by h.ind_no;
+ commit;
+ 
+ --对应字段分别是：区县	门户账号	姓名	手机号码	OA账号	承包单元编码	承包单元名称	承包单元类型	是否有角色（小CEO）
+ select city_desc,
+       login_id,
+       user_name,
+       mobile,
+       oa_id,
+       chengbao_no,
+       chengbao_name,
+       type_desc,      
+       case when r.user_Id is not null then '已有角色cbzs_ceo' else '没有角色cbzs_ceo' end isflag
+  from mobile_cbzs.temp_tj_hd_xch t,(select user_id from mobile_cbzs.e_user_role r where r.role_code = 'cbzs_ceo')r
+ where  t.login_id =r.user_id(+)     
+ order by ind_no;

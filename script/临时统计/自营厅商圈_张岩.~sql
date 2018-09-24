@@ -1,0 +1,97 @@
+ DECLARE
+  V_ACCT_MONTH VARCHAR2(100);
+  CURSOR V_AREA IS
+    SELECT * FROM DIM.DIM_AREA_NO WHERE AREA_NO <> '018' ORDER BY IDX_NO;
+BEGIN
+  --EXECUTE IMMEDIATE 'TRUNCATE TABLE tmp_majh_0116_01';
+  FOR V_NUM IN 201706 .. 201712 LOOP
+    V_ACCT_MONTH := TO_CHAR(V_NUM);
+    FOR C1 IN V_AREA LOOP
+      
+/*      --单C 可选包的用户
+      INSERT INTO tmp_majh_0116_01
+        SELECT distinct A.USER_NO, '1',V_ACCT_MONTH,c1.area_no
+          FROM 
+               (SELECT T.USER_NO, T.USER_DINNER
+                  FROM dw.DW_V_USER_PRODUCT_INFO T
+                 WHERE T.ACCT_MONTH = '201712'
+                   AND T.AREA_NO = C1.AREA_NO
+                   AND T.TELE_TYPE = '2'
+                   AND (TO_CHAR(T.END_DATE, 'YYYYMM') >= V_ACCT_MONTH OR
+                       T.END_DATE IS NULL)) A,
+              tmp_dinner_bag B --可选包
+         WHERE  A.USER_DINNER = B.USER_DINNER;
+      COMMIT;*/
+
+
+/*create table tmp_majh_0116_02
+(
+acct_month varchar2(20),
+area_no varchar2(20),
+onnet_cnt number,
+school_onnet_cnt  number,
+acct_cnt number,
+school_acct_cnt number,
+fee_cnt number,
+school_fee_cnt number,
+s_onnet_cnt number,
+s_acct_cnt number,
+s_fee_cnt number,
+is_huaxiao_01 varchar2(20),
+is_huaxiao_02 varchar2(20)
+)     */
+      
+      insert into tmp_majh_0116_02
+      select 
+      v_acct_month,
+      c1.area_no,
+      count(distinct case when a.is_onnet='1' then a.user_no end)onnet_cnt,
+      count(distinct case when a.is_onnet='1' and b.user_no is not null then a.user_no end)school_onnet_cnt,
+      count(distinct case when (a.is_acct='1' or a.is_acct_ocs='1')  then a.user_no end)acct_cnt,
+      count(distinct case when (a.is_acct='1' or a.is_acct_ocs='1') and b.user_no is not null then a.user_no end)school_acct_cnt,
+      sum(a.price_fee+a.price_fee_ocs) fee_cnt,
+      sum(case when b.user_no is not null then a.price_fee+a.price_fee_ocs else 0 end) school_fee_cnt,
+      count(distinct case when a.is_onnet='1' and c.user_no is not null then a.user_no end)s_onnet_cnt,
+      count(distinct case when (a.is_acct='1' or a.is_acct_ocs='1') and c.user_no is not null then a.user_no end)s_acct_cnt,
+      sum(case when c.user_no is not null then a.price_fee+a.price_fee_ocs else 0 end) s_fee_cnt,
+      is_huaxiao_01,
+      is_huaxiao_02,
+      is_huaxiao_03
+      from
+      (select user_no,is_onnet,is_acct,is_acct_ocs,price_fee,price_fee_ocs,is_huaxiao_01,is_huaxiao_02,is_huaxiao_03 from dw.dw_v_user_huaxiao_info_m a
+      where acct_month=V_ACCT_MONTH
+      and area_no=c1.area_no
+      and tele_type='2'
+      and IS_KD_BUNDLE='0'
+      and (a.is_huaxiao_01='1' or a.is_huaxiao_02='1' or is_huaxiao_03='1'))a,
+      (select user_no from dw.DW_V_USER_SCHOOL_HX_USER_M b
+      where acct_month=v_acct_month
+      and area_no=c1.area_no)b,
+      (select * from tmp_majh_0116_01 where acct_month=v_acct_month and area_no=c1.area_no) c
+      where a.user_no=b.user_no(+)
+      and a.user_no=c.user_no(+)
+      group by is_huaxiao_01,is_huaxiao_02,is_huaxiao_03;
+            COMMIT;
+    END LOOP;
+  END LOOP;
+END;
+
+
+--导出
+select acct_month,
+       b.area_desc,
+       sum(onnet_cnt),
+       sum(school_onnet_cnt),
+       sum(s_onnet_cnt),
+       sum(acct_cnt),
+       sum(school_acct_cnt),
+       sum(s_acct_cnt),
+       sum(fee_cnt),
+       sum(school_fee_cnt), 
+       sum(s_fee_cnt)
+  from tmp_majh_0116_02 t, dim.dim_area_no b
+ where t.area_no = b.area_no
+   --and t.acct_month = '201706'
+   and t.is_huaxiao_01 = '1'
+ group by t.acct_month, b.area_desc, b.idx_no
+ order by t.acct_month, b.idx_no

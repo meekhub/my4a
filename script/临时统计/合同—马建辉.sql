@@ -1,0 +1,22 @@
+create table CONTRACT_INFO AS 
+select a.CONTRACTID,
+       b.STATUS,
+       b.SIGNCODE,
+       b.CONTRACTCODE,
+       a.smallcode
+  from MSS_DS.bcontract@hana b, MSS_DS.BCONTRACT_SMALL@hana a
+ where a.CONTRACTID = b.ID
+   and b.COOPERATIONTYPE = 3;
+   
+
+
+select *
+  from (select a.*,
+               ROW_NUMBER() OVER(PARTITION BY a.SMALLCODE ORDER BY a.status DESC,CONTRACTID desc) rn
+          from contract_info a)
+ where rn = 1
+ and SMALLCODE='813010830070000'
+ 
+ 
+    
+   select count(*),smallcode from CONTRACT_INFO  group by smallcode having count(*)>1

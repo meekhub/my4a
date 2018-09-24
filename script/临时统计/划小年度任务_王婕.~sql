@@ -1,0 +1,32 @@
+--自有厅
+出账收入  T1011
+考核积分  T1012
+--商圈
+出账收入  T2010
+--社区
+出账收入  T3011
+--农村
+出账收入  T4007
+
+
+SELECT B.AREA_DESC 地市,
+       C.CITY_DESC 区县,
+       A.HUAXIAO_NO 划小单元编码,
+       A.HUAXIAO_NAME 划小单元名称,
+       CASE
+         WHEN A.TASK_NO IN ('T1011', 'T1012') THEN
+          '自有厅'
+         WHEN A.TASK_NO = 'T2010' THEN
+          '商圈'
+         WHEN A.TASK_NO = 'T3011' THEN
+          '社区'
+         WHEN A.TASK_NO = 'T4007' THEN
+          '农村'
+       END 划小类型,
+       A.TASK_NAME 任务类型,
+       A.TASK_VALUE 任务值,
+       A.INSERT_DATE 录入时间
+  FROM DIM.DIM_HUAXIAO_TASK_INFO A, DIM.DIM_AREA_NO B, DIM.DIM_CITY_NO C
+ WHERE A.TASK_NO IN ('T1011', 'T1012', 'T2010', 'T3011', 'T4007')
+   AND A.AREA_NO = B.AREA_NO
+   AND A.CITY_NO = C.CITY_NO

@@ -1,0 +1,118 @@
+create table tmp_majh_cuan_0609_02 as
+SELECT TO_CHAR(REG_DATE, 'YYYYMM')REG_DATE,
+       A.AREA_NO,
+       A.CITY_NO,
+       A.TERMINAL_CORP,
+       A.TERMINAL_MODEL, 
+       COUNT(DISTINCT A.TERMINAL_CODE) REG_CNT,
+       COUNT(DISTINCT B.MOBILE_NO) HANG_CNT,
+       COUNT(DISTINCT case when b.mobile_no is null then C.TERMKEY end ) CUAN_CNT
+  FROM (SELECT AREA_NO,
+               CITY_NO,
+               TERMINAL_CODE,
+               TERMINAL_CORP,
+               TERMINAL_MODEL,
+               REG_DATE,
+               ACCT_MONTH
+          FROM DW.DW_V_USER_TERMINAL_DEVICE_M A
+         WHERE ACCT_MONTH = '201805'
+           AND TO_CHAR(REG_DATE, 'YYYY') >= '2018') A,
+       (SELECT MOBILE_NO,
+               USED_DATE,
+               OPERATE_DATE,
+               SUGGEST_PRICE,
+               PHONE_NUMBER,
+               RESOURCE_KIND,
+               TO_CHAR(IN_DATE, 'YYYYMMDD') IN_DATE
+          FROM CRM_DSG.IR_MOBILE_USING_T@HBODS A --终端出入库信息表 
+        ) B,
+       (SELECT * FROM CRM_DSG.BI_MDN_TERMINFO_IMP_T@HBODS) C
+ WHERE A.TERMINAL_CODE = B.MOBILE_NO(+)
+   AND A.TERMINAL_CODE = C.TERMKEY(+)
+ GROUP BY TO_CHAR(REG_DATE, 'YYYYMM'),
+          A.AREA_NO,
+          A.CITY_NO,
+          A.TERMINAL_CORP,
+          A.TERMINAL_MODEL;
+
+
+
+--分地市
+  SELECT SUBSTR(A.REG_DATE, 1, 4),
+         B.AREA_DESC，
+         SUM(REG_CNT),
+         SUM(HANG_CNT),
+         SUM(CUAN_CNT)
+    FROM tmp_majh_cuan_0609_02 A, DIM.DIM_AREA_NO B
+   WHERE FUNC_GET_XIONGAN_AREA_NO(A.AREA_NO, A.CITY_NO) = B.AREA_NO
+   AND SUBSTR(A.REG_DATE, 1, 4)='2018'
+   GROUP BY SUBSTR(A.REG_DATE, 1, 4),B.AREA_DESC,b.idx_no
+   ORDER BY B.IDX_NO
+
+--分品牌
+  SELECT  
+         a.TERMINAL_CORP,
+         SUM(REG_CNT),
+         SUM(HANG_CNT),
+         SUM(CUAN_CNT)
+    FROM tmp_majh_cuan_0609_02 A
+    where SUBSTR(A.REG_DATE, 1, 4)='2018'
+    group by a.TERMINAL_CORP
+
+
+
+--月度终端窜入率
+  SELECT  
+         a.TERMINAL_CORP,
+         SUM(REG_CNT),
+         SUM(HANG_CNT),
+         SUM(CUAN_CNT)
+    FROM tmp_majh_cuan_0609_02 A
+    where SUBSTR(A.REG_DATE, 1, 6)='201804'
+    group by a.TERMINAL_CORP
+
+
+
+--月度终端外省注册率
+SELECT B.RESOURCE_MANUFACTURER,
+       COUNT(DISTINCT A.MOBILE_NO),  
+       COUNT(DISTINCT A.TERMINAL_CODE_OUT)
+  FROM TMP_MAJH_CUAN_0530_04 A, TMP_MAJH_TRM_MODEL B
+ WHERE A.RESOURCE_KIND = B.RESOURCE_KIND_NO
+   AND SUBSTR(IN_DATE, 1, 6) = '201804'
+ GROUP BY B.RESOURCE_MANUFACTURER
+ 
+ 
+ --合约终端号卡注册匹配率
+   SELECT C.AREA_DESC,
+          COUNT(DISTINCT A.TERMINAL_CODE),
+          COUNT(DISTINCT CASE
+                  WHEN A.DEVICE_NUMBER = B.DEVICE_NUMBER THEN
+                   A.TERMINAL_CODE
+                END),
+          COUNT(DISTINCT CASE
+                  WHEN A.DEVICE_NUMBER = B1.DEVICE_NUMBER THEN
+                   A.TERMINAL_CODE
+                END)
+     FROM (SELECT AREA_NO, DEVICE_NO AS TERMINAL_CODE, DEVICE_NUMBER
+             FROM TMP_MAJH_0328_02
+            WHERE SUBSTR(BEGIN_DATE, 1, 6) = '201804') A,
+          (SELECT TERMINAL_CODE, DEVICE_NO AS DEVICE_NUMBER
+             FROM DW.DW_V_USER_TERMINAL_D B
+            WHERE ACCT_MONTH = '201806'
+              AND DAY_ID = '08'
+              AND TO_CHAR(REG_DATE, 'YYYYMM') = '201804') B,
+          (SELECT TERMINAL_CODE, DEVICE_NO AS DEVICE_NUMBER
+             FROM DW.DW_V_USER_TERMINAL_D B
+            WHERE ACCT_MONTH = '201806'
+              AND DAY_ID = '08'
+              AND TO_CHAR(REG_DATE, 'YYYYMM') = '201805') B1,
+          DIM.DIM_AREA_NO C
+    WHERE A.TERMINAL_CODE = B.TERMINAL_CODE(+)
+      AND A.TERMINAL_CODE = B1.TERMINAL_CODE(+)
+      AND A.AREA_NO = C.AREA_NO(+)
+    GROUP BY C.AREA_DESC
+ 
+ 
+ 
+ 

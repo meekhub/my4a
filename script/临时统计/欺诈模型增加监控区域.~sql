@@ -1,0 +1,13 @@
+select * from dim.dim_area_contrast a where a.prov_desc like '%海南%'
+
+
+合肥 305
+茂名 568
+鞍山 912
+仙桃 713
+儋州 503
+德阳 825
+龙岩 384
+漳州 395
+
+

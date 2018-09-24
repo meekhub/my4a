@@ -1,0 +1,18 @@
+select t.*, t.rowid from tmp_majh_0306_02 t;
+
+truncate table tmp_majh_0306_02
+
+create table tmp_majh_0306_03 as
+select 
+a.*,case when b.terminal_code is not null then '1' else '0' end is_reg, reg_date
+ from tmp_majh_0306_02 a,
+(select terminal_code,to_char(reg_date,'yyyymmdd')reg_date from dw.dw_v_user_terminal_device_d
+where acct_month='201803'
+and day_id='25')b
+where a.terminal_code=b.terminal_code(+);
+
+
+select 
+is_reg,reg_date
+ from tmp_majh_0306_03
+ order by idx_no

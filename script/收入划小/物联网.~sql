@@ -1,0 +1,26 @@
+create table tmp_majh_wlw_01 as 
+SELECT C.SERV_ID, C.ACC_NBR, A.FEE_ID
+  FROM BF_DDOS_ITEM_RELA_T A, IOT_BILL B, SERV C
+ WHERE A.GROUP_ITEM = B.ACCT_TYPE
+   AND B.RELATION_ACCT_NUMBER = C.ACC_NBR
+   AND B.CITY_CODE = C.CITY_CODE
+   AND B.CITY_CODE = '180'
+   AND C.CITY_CODE = '180'
+   AND B.FEE_DATE = '201709';
+           
+           
+SELECT b.city_code,b.user_id,b.real_price_fee2
+  FROM (SELECT DISTINCT T.* FROM TMP_MAJH_WLW_01 T) A,
+       (SELECT *
+          FROM BRPT_GATHER_FEE_MONTH_T
+         WHERE STAT_MONTH = '201709'
+           AND CITY_CODE = '180') B
+ WHERE A.SERV_ID = B.USER_ID(+)
+   AND A.FEE_ID = B.FEE_KIND(+)
+
+
+
+
+
+
+

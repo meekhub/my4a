@@ -1,0 +1,77 @@
+select * from  CPT_SERV_CT_CUR B
+ WHERE B.ACCT_MONTH = '201805'
+   AND B.DAY_ID = '01'
+   and net_type_id = '1020'
+   and add_flag='1'
+ 
+ create table tmp_majh_jz_0516_01
+ (
+ DAY_ID varchar2(20) ,
+ AREA_NO  varchar2(20) ,
+ PRD_INST_ID  varchar2(20) ,
+ ACC_NBR  varchar2(20) 
+ )
+
+select * from  tmp_majh_jz_0516_01
+ --过网用户新增
+DECLARE
+  V_DAY VARCHAR2(100);
+  CURSOR V_AREA IS
+    SELECT *
+      FROM DIM.DIM_AREA_NO
+     WHERE AREA_NO IN ('181', '187')
+     ORDER BY IDX_NO;
+BEGIN
+  FOR V_NUM IN 20180501 .. 20180515 LOOP
+    V_DAY := SUBSTR(TO_CHAR(V_NUM), 7, 2);
+    FOR C1 IN V_AREA LOOP
+      insert into tmp_majh_jz_0516_01 
+      SELECT DAY_ID, AREA_NO, PRD_INST_ID, ACC_NBR
+        FROM CPT_SERV_CT_CUR B
+       WHERE B.ACCT_MONTH = '201805'
+         AND B.DAY_ID = V_DAY
+         and area_no=c1.area_no
+         AND NET_TYPE_ID = '1020'
+         AND ADD_FLAG = '1';
+          COMMIT;
+    END LOOP;
+  END LOOP;
+END;
+
+
+
+--实际新增
+truncate table TMP_MAJH_JZ_0516_02
+INSERT INTO TMP_MAJH_JZ_0516_02
+  SELECT DAY_ID, AREA_NO, USER_NO, DEVICE_NUMBER, IS_OCS
+    FROM DW.DW_V_USER_BASE_INFO_DAY@HBDW B
+   WHERE B.ACCT_MONTH = '201805'
+     AND B.DAY_ID = '15'
+     and tele_type='2'
+     and area_no in ('181','187')
+     and city_no not in ('018187015','018187022','018187002')
+     and is_onnet='1'
+     AND ((IS_OCS = '0' AND IS_NEW = '1' OR
+         (IS_OCS = '0' AND
+         TO_CHAR(INNET_DATE, 'YYYYMM') = '201805')) OR
+         (IS_OCS = '1' AND IS_NEW = '1' OR
+         (IS_OCS = '1' AND CALL_FLAG = '1' AND
+         TO_CHAR(SERVICE_START_DATE, 'YYYYMM') = '201805')));
+
+
+select 
+a.area_no,count(*),count(case when b.prd_inst_id is not null then a.prd_inst_id end)
+ from tmp_majh_jz_0516_01 a,tmp_majh_jz_0516_02 b
+where a.prd_inst_id=b.prd_inst_id(+)
+group by a.area_no
+
+
+select 
+a.area_no,count(*),count(case when b.prd_inst_id is not null then a.prd_inst_id end)
+ from tmp_majh_jz_0516_02 a,tmp_majh_jz_0516_01 b
+where a.prd_inst_id=b.prd_inst_id(+)
+group by a.area_no
+
+
+--实际新增未产生话单
+

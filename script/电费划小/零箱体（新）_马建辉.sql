@@ -1,0 +1,363 @@
+--分光器最早入网时间
+CREATE TABLE MID_ZERO_FGQ_INFO AS 
+SELECT *
+  FROM (SELECT BOX_NAME,
+               FGQ_DATE,
+               STANDARD_ID,
+               STANDARD_NAME,
+               XM_NO,
+               ROW_NUMBER() OVER(PARTITION BY BOX_NAME ORDER BY FGQ_DATE ASC) RN
+          FROM ALLDM_LINBOX_M_LIN)
+ WHERE RN = 1;
+
+--箱体端口占用情况
+CREATE TABLE MID_ZERO_FGQ_BASE AS 
+SELECT BOX_NAME，SUM(CASE
+                      WHEN TRIM(TRANSLATE(T.DK_NUMBER, '.0123456789', ' ')) IS NULL THEN
+                       DK_NUMBER
+                      ELSE
+                       '0'
+                    END) DK_NUMBER,
+       SUM(CASE
+             WHEN TRIM(TRANSLATE(T.DK_USE_NUMBER, '.0123456789', ' ')) IS NULL THEN
+              DK_USE_NUMBER
+             ELSE
+              '0'
+           END) DK_USE_NUMBER
+  FROM ALLDM_LINBOX_M_LIN T
+ GROUP BY BOX_NAME
+
+--生成所有箱体中间表
+insert into mid_zero_box_base_info
+SELECT '201807' ACCT_MONTH,
+       F.AREA_NO,
+       G.CITY_NO,
+       E.HUAXIAO_NO,
+       E.HUAXIAO_NAME,
+       E.XIAOQU_NO,
+       E.XIAOQU_NAME,
+       '' BOX_ID,
+       A.BOX_NAME,
+       A.FGQ_DATE,
+       A.STANDARD_ID,
+       T.STDADDR_NAME,
+       SUM(H.KD_USER) KD_USER,
+       SUM(H.RUZHU_USER) FG_USERS,
+       CASE
+         WHEN K.DK_USE_NUMBER = 0 THEN
+          '1'
+         ELSE
+          '0'
+       END IS_ZERO
+  FROM MID_ZERO_FGQ_INFO A,
+       (SELECT /*+PARALLEL(T,10)*/
+         TO_CHAR(ID) ID,
+         GRADE_3,
+         T.GRADE_0 || '/' || T.GRADE_1 || '/' || T.GRADE_2 || '/' ||
+         T.GRADE_3 || '/' || T.GRADE_4 STDADDR_NAME
+          FROM DW.DATMT_GIS_STANDARDADDRESS_QE T) T,
+       (SELECT * FROM ALLDMCODE.DMCODE_XIAOQU_STD_ADDR_NEW) C,
+       DIM.DIM_XIAOQU_HUAXIAO E,
+       DIM.DIM_AREA_NO F,
+       DIM.DIM_CITY_NO G， (SELECT SUBDISTRICT_ID AS XIAOQU_NO,
+                                  SUBDISTRICT_NAME AS XIAOQU_NAME,
+                                  SUM(NET_NUM) KD_USER,
+                                  SUM(FAMILY_NUM) RUZHU_USER
+                             FROM XQGF.ST_XQGF_LEADER_VIEW_SUBDIS_DAY@YXSP
+                            WHERE DAY_ID = '20180731'
+                            GROUP BY SUBDISTRICT_ID, SUBDISTRICT_NAME) H,
+       MID_ZERO_FGQ_BASE K
+ WHERE A.STANDARD_ID = T.ID
+   AND T.STDADDR_NAME = C.STDADDR_NAME
+   AND C.XIAOQU_NO = E.XIAOQU_NO
+   AND E.AREA_NO = F.AREA_NO
+   AND E.CITY_NO = G.CITY_NO
+   AND C.XIAOQU_NO = H.XIAOQU_NO(+)
+   AND A.BOX_NAME = K.BOX_NAME(+)
+ GROUP BY F.AREA_NO,
+       G.CITY_NO,
+       E.HUAXIAO_NO,
+       E.HUAXIAO_NAME,
+       E.XIAOQU_NO,
+       E.XIAOQU_NAME, 
+       A.BOX_NAME,
+       A.FGQ_DATE,
+       A.STANDARD_ID,
+       T.STDADDR_NAME, 
+       CASE
+         WHEN K.DK_USE_NUMBER = 0 THEN
+          '1'
+         ELSE
+          '0'
+       END;
+
+--零箱体明细
+DELETE FROM  dm_zero_box_base_info where ACCT_MONTH='201807';
+COMMIT;
+INSERT INTO DM_ZERO_BOX_BASE_INFO
+  SELECT ACCT_MONTH,
+         AREA_NO,
+         CITY_NO,
+         HUAXIAO_NO,
+         HUAXIAO_NAME,
+         XIAOQU_NO,
+         XIAOQU_NAME,
+         BOX_ID,
+         BOX_NAME,
+         INNET_DATE,
+         STANDARD_ID,
+         STANDARD_NAME,
+         KD_CNT,
+         FG_CNT,
+         ''
+    FROM MID_ZERO_BOX_BASE_INFO
+   WHERE IS_ZERO = '1';
+   commit;
+
+--零箱体统计
+DELETE FROM  DM_ZERO_BOX_HZ_INFO where ACCT_MONTH='201807';
+COMMIT;
+
+INSERT INTO DM_ZERO_BOX_HZ_INFO
+  SELECT '201807' V_MONTH,
+         A.AREA_NO,
+         A.CITY_NO,
+         A.HUAXIAO_NO,
+         A.HUAXIAO_NAME,
+         A.XIAOQU_NO,
+         A.XIAOQU_NAME, 
+         CASE WHEN SUBSTR(A.INNET_DATE, 1, 4) >= '2018' THEN '1' ELSE '2' END， 
+         COUNT(DISTINCT case when a.is_zero='1' then a.BOX_NAME end),
+         COUNT(DISTINCT A.BOX_NAME),
+         SUM(A.KD_CNT),
+         SUM(A.FG_CNT)
+    FROM MID_ZERO_BOX_BASE_INFO A 
+   GROUP BY A.AREA_NO,
+            A.CITY_NO,
+            A.HUAXIAO_NO,
+            A.HUAXIAO_NAME,
+            A.XIAOQU_NO,
+            A.XIAOQU_NAME, 
+            CASE
+              WHEN SUBSTR(A.INNET_DATE, 1, 4) >= '2018' THEN
+               '1'
+              ELSE
+               '2'
+            END
+
+--1箱体明细
+DELETE FROM  DM_ONE_BOX_BASE_INFO WHERE ACCT_MONTH='201807';
+COMMIT;
+
+INSERT INTO DM_ONE_BOX_BASE_INFO
+  SELECT ACCT_MONTH,
+         AREA_NO,
+         CITY_NO,
+         HUAXIAO_NO,
+         HUAXIAO_NAME,
+         XIAOQU_NO,
+         XIAOQU_NAME,
+         BOX_ID,
+         BOX_NAME,
+         INNET_DATE,
+         STANDARD_ID,
+         STANDARD_NAME,
+         KD_CNT,
+         FG_CNT 
+    FROM MID_ZERO_BOX_BASE_INFO a where exists
+    (select 1 from MID_ZERO_FGQ_BASE b where a.box_name=b.box_name
+    and b.dk_use_number=1);
+   COMMIT;
+   
+   
+ --1箱体统计
+DELETE FROM  DM_ONE_BOX_HZ_INFO where ACCT_MONTH='201807';
+COMMIT;
+
+INSERT INTO DM_ONE_BOX_HZ_INFO
+  SELECT '201807' V_MONTH,
+         A.AREA_NO,
+         A.CITY_NO,
+         A.HUAXIAO_NO,
+         A.HUAXIAO_NAME,
+         A.XIAOQU_NO,
+         A.XIAOQU_NAME,
+         CASE WHEN SUBSTR(A.INNET_DATE, 1, 4) >= '2018' THEN '1' ELSE '2' END， 
+         COUNT(DISTINCT B.BOX_NAME),
+         COUNT(DISTINCT A.BOX_NAME),
+         SUM(A.KD_CNT),
+         SUM(A.FG_CNT)
+    FROM MID_ZERO_BOX_BASE_INFO A,
+         (SELECT * FROM MID_ZERO_FGQ_BASE WHERE DK_USE_NUMBER = 1) B
+   WHERE A.BOX_NAME = B.BOX_NAME(+)
+   GROUP BY A.AREA_NO,
+            A.CITY_NO,
+            A.HUAXIAO_NO,
+            A.HUAXIAO_NAME,
+            A.XIAOQU_NO,
+            A.XIAOQU_NAME,
+            CASE
+              WHEN SUBSTR(A.INNET_DATE, 1, 4) >= '2018' THEN
+               '1'
+              ELSE
+               '2'
+            END;
+ commit;
+ 
+
+--箱体扩容预警表（超70%的列入此表）
+DELETE FROM  DM_ALARM_BOX_BASE_INFO where ACCT_MONTH='201807';
+COMMIT;
+
+INSERT INTO DM_ALARM_BOX_BASE_INFO
+  SELECT '201807' ACCT_MONTH,
+         A.AREA_NO,
+         A.CITY_NO,
+         A.HUAXIAO_NO,
+         A.HUAXIAO_NAME,
+         A.XIAOQU_NO,
+         A.XIAOQU_NAME,
+         A.BOX_NAME,
+         B.DK_NUMBER,
+         B.DK_USE_NUMBER,
+         B.DK_NUMBER - B.DK_USE_NUMBER AS UNUSE_CNT
+    FROM MID_ZERO_BOX_BASE_INFO A, MID_ZERO_FGQ_BASE B
+   WHERE A.BOX_NAME = B.BOX_NAME
+     AND B.DK_NUMBER > 0
+     AND B.DK_USE_NUMBER / B.DK_NUMBER > 0.7;
+
+
+--零箱体整治效果后评估（区分12项目）
+create table mid_zero_eval_box as 
+SELECT DISTINCT X.BOX_NAME, Y.FGQ_NAME
+  FROM (SELECT A.BOX_NAME, A.CITY_DESC
+          FROM (SELECT *
+                  FROM ALLDM.DM_ZERO_BOX_INFO
+                 WHERE ACCT_MONTH = '201806') A,
+               (SELECT *
+                  FROM ALLDM.DM_ZERO_BOX_BASE_INFO
+                 WHERE ACCT_MONTH = '201807') B
+         WHERE A.AREA_NO = B.AREA_NO(+)
+           AND A.CITY_NO = B.CITY_NO(+)
+           AND A.BOX_NAME = B.BOX_NAME(+)
+           AND B.BOX_NAME IS NULL) X,
+       (SELECT DISTINCT BOX_NAME, FGQ_NAME FROM ALLDM_LINBOX_M_LIN) Y
+ WHERE X.BOX_NAME = Y.BOX_NAME
+
+
+--沉淀分光器下挂用户明细
+CREATE TABLE mid_fgq_user_mx AS 
+SELECT upper(SERVICE_CODE) device_number, RESNAME as FGQ_NAME
+  FROM STAGE.NN_INF_RESSERVICEINSDETAIL_KD@HBODS
+ WHERE ATTRIBUTENAME IN ('分光器名称');
+
+
+--当月1增用户明细
+create table mid_zero_box_user as 
+SELECT DISTINCT '201807' acct_month, A.BOX_NAME, A.FGQ_NAME, B.DEVICE_NUMBER
+  FROM MID_ZERO_EVAL_BOX A, MID_FGQ_USER_MX B
+ WHERE A.FGQ_NAME = B.FGQ_NAME;
+ 
+/* insert into mid_zero_box_user
+ select '201806',A.* from XXHB_MJH.TMP_MAJH_LM_0810_02 A;*/
+
+--沉淀对应用户明细
+CREATE TABLE MID_ZERO_BOX_ACCOUNT AS
+SELECT DISTINCT A.ACCT_MONTH,ACCOUNT_NO, BOX_NAME, FGQ_NAME
+  FROM (SELECT DISTINCT ACCT_MONTH, BOX_NAME, FGQ_NAME, DEVICE_NUMBER
+          FROM MID_ZERO_BOX_USER) A,
+       (SELECT ACCOUNT_NO, TOTAL_FEE, USER_NO, DEVICE_NUMBER, MONTH_FEE
+          FROM DW.DW_V_USER_BASE_INFO_USER B
+         WHERE ACCT_MONTH = '201807'
+           AND TELE_TYPE IN ('4', '26')
+           AND IS_ONNET = '1') B
+ WHERE A.DEVICE_NUMBER = B.DEVICE_NUMBER(+);
+
+
+--剔重
+create table MID_ZERO_BOX_ACCOUNT_2 as 
+SELECT *
+  FROM (SELECT A.*,
+               ROW_NUMBER() OVER(PARTITION BY ACCOUNT_NO ORDER BY ACCT_MONTH DESC) RN
+          FROM MID_ZERO_BOX_ACCOUNT A)
+ WHERE RN = 1;
+
+
+
+
+--沉淀收入
+  CREATE TABLE  MID_ZERO_BOX_FEE AS
+    SELECT B.ACCT_MONTH,
+           A.ACCT_MONTH AS REG_DATE,
+           A.BOX_NAME,
+           A.FGQ_NAME,
+           B.ACCOUNT_NO,
+           B.USER_NO,
+           B.DEVICE_NUMBER,
+           SUM(B.TOTAL_FEE + B.TOTAL_FEE_OCS) TOTAL_FEE
+      FROM MID_ZERO_BOX_ACCOUNT_2 A,
+           (SELECT NVL(BUNDLE_ID_ALLOWANCE, BUNDLE_ID) AS BUNDLE_ID,
+                   TOTAL_FEE,
+                   TOTAL_FEE_OCS,
+                   USER_NO,
+                   DEVICE_NUMBER,
+                   ACCT_MONTH,
+                   ACCOUNT_NO
+              FROM DW.DW_V_USER_BASE_INFO_USER B
+             WHERE ACCT_MONTH = '201807'
+               AND IS_ONNET = '1') B
+     WHERE A.ACCOUNT_NO = B.ACCOUNT_NO
+     GROUP BY B.ACCT_MONTH,
+              A.ACCT_MONTH,
+              A.BOX_NAME,
+              A.FGQ_NAME,
+              B.ACCOUNT_NO,
+              B.USER_NO,
+              B.DEVICE_NUMBER;
+
+
+
+--写入汇总表
+DELETE FROM  DM_BOX_EFFECT_EVAL where ACCT_MONTH='201806';
+COMMIT;
+
+    INSERT INTO DM_BOX_EFFECT_EVAL
+    SELECT 
+    A.ACCT_MONTH,
+    A.AREA_NO,
+    A.CITY_NO,
+    A.HUAXIAO_NO,
+    A.HUAXIAO_NAME,
+    A.XIAOQU_NO,
+    A.XIAOQU_NAME,
+    CASE WHEN SUBSTR(A.INNET_DATE, 1, 4) >= '2018' THEN '1' ELSE '2' END， 
+    COUNT(DISTINCT  CASE WHEN B.REG_DATE='201806' THEN A.BOX_NAME END),
+    COUNT(DISTINCT CASE WHEN B.REG_DATE='201806' THEN B.USER_NO END),
+    SUM(CASE WHEN B.REG_DATE='201806' THEN B.TOTAL_FEE ELSE 0 END),
+    COUNT(DISTINCT A.BOX_NAME),
+    COUNT(DISTINCT B.USER_NO),
+    SUM(B.TOTAL_FEE)
+    FROM MID_ZERO_BOX_BASE_INFO A, MID_ZERO_BOX_FEE B
+    WHERE A.BOX_NAME = B.BOX_NAME
+    GROUP BY A.ACCT_MONTH,
+    A.AREA_NO,
+    A.CITY_NO,
+    A.HUAXIAO_NO,
+    A.HUAXIAO_NAME,
+    A.XIAOQU_NO,
+    A.XIAOQU_NAME,
+    CASE WHEN SUBSTR(A.INNET_DATE, 1, 4) >= '2018' THEN '1' ELSE '2' END;
+    commit;
+
+
+
+
+
+
+
+
+
+
+
+
+

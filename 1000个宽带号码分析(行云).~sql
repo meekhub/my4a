@@ -1,0 +1,91 @@
+create table tmp_majh_0906_02
+(
+area_no	varchar(20),
+city_no	varchar(100),
+cell_phone	varchar(30),
+reserv1	varchar(400),
+reserv3	varchar(20)
+)
+
+insert into tmp_majh_0906_02
+{
+select * from temp_user.tmp_majh_0906_02
+}@hbdw
+
+select * from tmp_majh_0906_02
+
+select count(*),count(distinct cell_phone) from tmp_majh_0906_02 where reserv3='电信';
+
+create table tmp_majh_0908_03 
+(
+device_number varchar(20),
+call_duration integer,
+oppose_number varchar(20)
+)
+
+insert into tmp_majh_0908_01
+select 
+b.device_number,b.CALL_DURATION,b.oppose_number
+ from 
+(select *  from tmp_majh_0906_02 where reserv3='电信')a
+left join
+(SELECT device_number,CALL_DURATION,oppose_number FROM DW_V_USER_CDR_CDMA_OCS B
+                WHERE ACCT_MONTH ='201708' )b
+on a.reserv1=b.device_number;
+
+
+select * from   tmp_majh_0908_01 where device_number is not null;
+
+create table tmp_majh_0908_04 
+(
+device_number varchar(20),
+oppose_number varchar(20),
+call_duration integer
+)
+
+insert into tmp_majh_0908_04
+select device_number,oppose_number,sum(call_duration) from 
+(
+select * from tmp_majh_0908_01 
+union all
+select * from tmp_majh_0908_02
+)
+where device_number is not null
+group by device_number,oppose_number;
+
+select * from tmp_majh_0906_02
+
+
+select 
+distinct area_no,city_no,cell_phone,device_number,oppose_number,call_duration
+ from tmp_majh_0908_04 a,tmp_majh_0906_02 b
+where a.oppose_number=b.reserv1 and call_duration>0
+
+
+--从行云分析出的数据
+create table temp_user.tmp_majh_0907_01 
+(
+area_no varchar2(20),
+city_no varchar2(20),
+cell_phone varchar2(20),
+device_number varchar2(20),
+oppose_number varchar2(20),
+call_duration number
+)
+
+
+
+
+
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  
+                  

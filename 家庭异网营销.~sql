@@ -1,0 +1,9 @@
+select count(*) from 
+(select upper(cell_phone) cell_phone
+  FROM STAGE.TEMP_GU_BDM_MAJIANHUI T
+ where t.cell_phone like 'ip%')a,
+ (select device_number from dw.dw_v_user_base_info_user b
+ where acct_month='201706'
+ and is_onnet='1'
+ and tele_type in ('4','26'))b
+ where a.cell_phone=b.device_number

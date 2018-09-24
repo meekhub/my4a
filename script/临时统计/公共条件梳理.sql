@@ -1,0 +1,5 @@
+select * from NEW_RPT_HBTELE.DM_BUSI_ANAL_CITY_INFO;
+
+
+--合并区县
+select * from NEW_ALLDMCODE.DMCODE_AREA.

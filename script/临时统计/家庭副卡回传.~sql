@@ -1,0 +1,69 @@
+create table tmp_majh_base_1026_01
+(
+area_no varchar2(20),
+kd_number varchar2(20) 
+)
+
+执行过程数据：
+select  alldm.func_get_area_no(t.area_no),lower(t.kd_number) from temp_user.tmp_majh_base_1026_01 t
+
+营销成功的数据：
+select alldm.func_get_area_no(t.area_no),lower(t.kd_number),t.device_number from tmp_majh_fuka_1026_02 t; 
+
+
+--1、所有家庭副卡用户
+create table tmp_majh_kd_01 as
+select distinct area_no, kd_number from alldm.dm_v_user_family_wifi_m
+
+
+--2、从行云匹配上月单宽本月变为融合的
+
+--3、从行云将结果表同步至oracle
+create table tmp_majh_fuka_0913_02
+( 
+area_no  varchar2(20), 
+kd_number varchar2(20), 
+mobile_number varchar2(20) 
+);
+
+--4、营销成功用户数
+create table tmp_success_user as  
+select alldm.func_get_area_no(t.area_no) area_no,
+       lower(t.kd_number) kd_number,
+       t.mobile_number mobile_number
+  from temp_user.tmp_majh_fuka_0913_02 t;
+
+--5、执行用户数
+create table tmp_execute_user as
+select distinct  alldm.func_get_area_no(t.area_no) area_no,
+       lower(t.kd_number) kd_number
+  from temp_user.tmp_majh_fuka_0913_02 t
+union
+select distinct  alldm.func_get_area_no(t.area_no) area_no,
+       lower(t.kd_number) kd_number
+  from tmp_majh_kd_01 t
+  where rownum<82726
+ 
+
+/*DECLARE
+  V_MONTH VARCHAR2(100);
+  CURSOR V_AREA IS
+    SELECT * FROM DIM.DIM_AREA_NO WHERE AREA_NO <> '018' ORDER BY IDX_NO;
+BEGIN
+  FOR V_NUM IN 201209 .. 201209 LOOP
+    V_MONTH := TO_CHAR(V_NUM);
+    FOR C1 IN V_AREA LOOP
+      INSERT INTO TMP_MAJH_BASE_1026_02
+        SELECT B.AREA_NO, A.KD_NUMBER
+          FROM TMP_MAJH_BASE_1026_01 A,
+               (SELECT DEVICE_NUMBER, AREA_NO, CITY_NO
+                  FROM DW.DW_V_USER_BASE_INFO_USER B
+                 WHERE ACCT_MONTH = '201709'
+                   AND TELE_TYPE IN ('4', '26')
+                   AND AREA_NO = C1.AREA_NO
+                   AND IS_ONNET = '1') B
+         WHERE upper(A.KD_NUMBER) = B.DEVICE_NUMBER(+);
+      COMMIT;
+    END LOOP;
+  END LOOP;
+END;*/

@@ -1,0 +1,14 @@
+--动环与能耗匹配异常明细
+select * from 
+(SELECT distinct  area_name,group_name,replace(A.RELATION_ID,chr(13),'')RELATION_ID,room_name
+          FROM ALLDM.ELEC_STATION_D A
+         WHERE ACCT_MONTH = '201807')a,
+         (SELECT STATION_ID_A, STATION_ID_B
+          FROM (SELECT STATION_ID_A,
+                       STATION_ID_B,
+                       ROW_NUMBER() OVER(PARTITION BY STATION_ID_A ORDER BY 1) RN
+                  FROM DIM.DIM_STATION_REL
+                 WHERE STATION_ID_B IS NOT NULL and STATION_ID_B<>'#N/A')
+         WHERE RN = 1)b
+         where a.relation_id=b.STATION_ID_A(+)
+         and b.STATION_ID_A is null;

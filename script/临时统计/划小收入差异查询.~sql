@@ -1,0 +1,19 @@
+select huaxiao_no,sum(a),sum(b),sum(a)-sum(b) from 
+(select a.huaxiao_no,0 a, sum(total_fee) b from DM_V_HUAXIAO_INFO_M a where acct_month='201801' and area_no='187'
+group by huaxiao_no
+union all
+select a.huaxiao_no,sum(total_fee), 0 b from DM_V_CHANNEL_INFO_M a where acct_month='201801' and area_no='187'
+group by a.huaxiao_no)
+group by huaxiao_no 
+having sum(a)<>sum(b)
+
+select sum(price_fee + price_fee_ocs)
+  FROM DW.DW_V_USER_HUAXIAO_INFO_M A
+ WHERE A.ACCT_MONTH = '201801'
+   AND AREA_NO = '187'
+   and huaxiao_no_03='813060840070000'
+   667299.91
+   
+   
+   
+select * from dim.dim_huaxiao_info where huaxiao_no='813060840070000'

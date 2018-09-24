@@ -1,0 +1,9 @@
+sf=select * from
+sc=select count(*) from
+dis=distinct
+w=where
+cr=create table
+tr=truncate table
+gr=group by
+hv=having
+ord=order by
